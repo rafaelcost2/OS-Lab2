@@ -14,6 +14,7 @@
 #define NORMAL 0
 #define HIGH 1
 
+struct semaphore sem;
 /*
  *	initialize task with direction and priority
  *	call o
@@ -22,6 +23,8 @@ typedef struct {
 	int direction;
 	int priority;
 } task_t;
+
+int currentDirection,Spriority,Rpriority;
 
 void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
         unsigned int num_priority_send, unsigned int num_priority_receive);
@@ -43,8 +46,8 @@ void oneTask(task_t task);/*Task requires to use the bus and executes methods be
 void init_bus(void){ 
  
     random_init((unsigned int)123456789); 
-    
-    msg("NOT IMPLEMENTED");
+    sema_init(&sem,3);//initialize semaphore
+ //   msg("NOT IMPLEMENTED");
     /* FIXME implement */
 
 }
@@ -62,9 +65,29 @@ void init_bus(void){
 
 void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
         unsigned int num_priority_send, unsigned int num_priority_receive)
-{
-    msg("NOT IMPLEMENTED");
-    /* FIXME implement */
+{ const char name;
+  Spriority=num_priority_send;
+  Rpriority=num_priority_receive;
+  while( ( num_tasks_send > 0 ) || (number_task_receive > 0) ) {
+    if (num_priority_send > 0){
+      num_priority_send--; 
+      num_tasks_send--;// assuming that the number of tasks_send is equal to the number of tasks with low and high priority
+      thread_create(&name,1,senderPriorityTask,0); 
+    }    
+    else if ( num_priority_receive > 0 ){
+      num_priority_receive--;
+      num_task_receive--;
+      thread_create(&name,1,receiverPriorityTask,0)
+    }
+    else if ( num_tasks_send > 0 ){
+      num_tasks_send--;
+      thread_create(&name,0,senderTask,0); 
+    }
+    else if ( num_task_receive >0 ) {
+      num_task_receive--;
+      thread_create(&name,0,receiverTask,0);
+    }
+  }
 }
 
 /* Normal task,  sending data to the accelerator */
@@ -102,20 +125,40 @@ void oneTask(task_t task) {
 /* task tries to get slot on the bus subsystem */
 void getSlot(task_t task) 
 {
-    msg("NOT IMPLEMENTED");
-    /* FIXME implement */
+  int taskDirection=task->direction;
+
+  while (task->priority==0 )  { 
+    if ( ( Spriority == 0 ) && ( Rpriority == 0 ) ) {
+     break;
+    }
+  }
+  while !( ( taskDirection == currentDirection ) || ( sem == 3 ) ){
+
+  }
+  currentDirection=taskDirection;
+  sema_down(&sem); //waits for the semaphore to become positive and then decrements sem by one
+  if ( task->priority == HIGH ) {
+    if ( task->direction == 0 ) {
+       Spriority--; 
+    } 
+    else{ 
+       Rpriority--;
+    }
+  } 
+   
 }
 
 /* task processes data on the bus send/receive */
 void transferData(task_t task) 
 {
-    msg("NOT IMPLEMENTED");
-    /* FIXME implement */
+  printf("In the process of transfering data..........");
+  sleep(random_ulong());//the thread sleeps or a random time
+  printf("Exiting the transfering data ........"); 
+ 
 }
 
 /* task releases the slot */
 void leaveSlot(task_t task) 
 {
-    msg("NOT IMPLEMENTED");
-    /* FIXME implement */
+  sema_up(&sem); //increments the value of semaphore by one and wakes up the next
 }
