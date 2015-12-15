@@ -16,7 +16,7 @@
 #define HIGH 1
 
 struct semaphore sem;
-struct lock pri,tot;
+struct lock pri,tot,dir;
 /*
  *	initialize task with direction and priority
  *	call o
@@ -51,6 +51,7 @@ void init_bus(void){
     sema_init(&sem,3);//initialize semaphore
     lock_init(&pri);
     lock_init(&tot);
+    lock_init(&dir);
  //   msg("NOT IMPLEMENTED");
     /* FIXME implement */
 
@@ -71,8 +72,8 @@ void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
         unsigned int num_priority_send, unsigned int num_priority_receive)
 { const char name;
   lock_acquire(&pri);
-  Spriority=num_priority_send;
-  Rpriority=num_priority_receive;
+  Spriority=Spriority + num_priority_send;
+  Rpriority=Rpriority + num_priority_receive;
   lock_release(&pri);
  // printf("SP %i  RP %i \n", Spriority,Rpriority);
   lock_acquire(&tot);
@@ -98,9 +99,9 @@ void batchScheduler(unsigned int num_tasks_send, unsigned int num_task_receive,
       thread_create(&name,0,receiverTask,0);
     }
   } 
-   while (total>0){
-    timer_msleep(10);
-   }
+   //while (total>0){
+  //  timer_msleep(10);
+  // }
 }
 
 /* Normal task,  sending data to the accelerator */
@@ -149,7 +150,9 @@ void getSlot(task_t task)
   while  ( task.direction != currentDirection ) {
    timer_nsleep(10);
    if (sem.value==3){
+     lock_acquire(&dir);
      currentDirection=task.direction;
+     lock_release(&dir);
      }
   }
   
@@ -165,8 +168,12 @@ void getSlot(task_t task)
       // printf("RP %i \n", Rpriority); 
     }
     lock_release(&pri);
+	
   } 
-   
+   if ( ( Spriority + Rpriority > 0 ) && ( task.priority == 0 ) ) {
+    sema_up(&sem); 
+    getSlot(task);
+   }
 }
 
 /* task processes data on the bus send/receive */
@@ -182,7 +189,7 @@ void transferData(task_t task)
 void leaveSlot(task_t task) 
 {
   sema_up(&sem); //increments the value of semaphore by one and wakes up the next
-  lock_acquire(&tot);
-  total--;
-  lock_release(&tot);
+  //lock_acquire(&tot);
+  //total--;
+  //lock_release(&tot);
 }
