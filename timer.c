@@ -92,6 +92,8 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
+	if(ticks<=0)
+		return;
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
@@ -262,9 +264,9 @@ try_to_unblock (struct thread *t, void *aux)
    if (t->status==THREAD_BLOCKED){
        if (t->ticks>0){
           t->ticks--;
-       }
-       else{
-          thread_unblock(t);
+	  if(t->ticks == 0){
+		thread_unblock(t);
+	 }
        }
    }
 }
